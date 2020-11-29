@@ -208,7 +208,16 @@ pub enum Key {
     PageUp,
     Tab,
 
-    A, // Used for cmd+A (select All)
+    A, // Used for cmd+A (select All), ctrl+A (Emacs keybinding; move the cursor to the beginning of the current line)
+    E, // Used for ctrl+E (Emacs keybinding; move the cursor to the end of the current line)
+    N, // Used for ctrl+N (Emacs keybinding; move the cursor to the next line)
+    P, // Used for ctrl+P (Emacs keybinding; move the cursor to the previous line)
+    B, // Used for ctrl+B (Emacs keybinding; move the cursor back)
+    F, // Used for ctrl+F (Emacs keybinding; move the cursor forward)
+    D, // Used for ctrl+D (Emacs keybinding; delete a character after cursor)
+    H, // Used for ctrl+H (Emacs keybinding; delete a character before cursor)
+    O, // Used for ctrl+T (Emacs keybinding; break line)
+    T, // Used for ctrl+T (Emacs keybinding; transpose characters)
     K, // Used for ctrl+K (delete text after cursor)
     U, // Used for ctrl+U (delete text before cursor)
     W, // Used for ctrl+W (delete previous word)

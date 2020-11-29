@@ -671,6 +671,8 @@ fn on_key_press(
     key: Key,
     modifiers: &Modifiers,
 ) -> Option<CCursorPair> {
+    let mac_ctrl = modifiers.command == modifiers.mac_cmd && modifiers.ctrl;
+
     match key {
         Key::Backspace => {
             let ccursor = if modifiers.mac_cmd {
@@ -740,8 +742,127 @@ fn on_key_press(
             None
         }
 
+        Key::H if mac_ctrl => {
+            let ccursor = if let Some(cursor) = cursorp.single() {
+                delete_previous_char(text, cursor.ccursor)
+            } else {
+                delete_selected(text, cursorp)
+            };
+            Some(CCursorPair::one(ccursor))
+        }
+
+        Key::D if mac_ctrl => {
+            let ccursor = if let Some(cursor) = cursorp.single() {
+                delete_next_char(text, cursor.ccursor)
+            } else {
+                delete_selected(text, cursorp)
+            };
+            let ccursor = CCursor {
+                prefer_next_row: true,
+                ..ccursor
+            };
+            Some(CCursorPair::one(ccursor))
+        }
+
+        Key::T if mac_ctrl => transpose_characters(text, galley, cursorp),
+
+        Key::O if mac_ctrl => {
+            if let Some(cursor) = cursorp.single() {
+                let mut ccursor = cursor.ccursor;
+                insert_text(&mut ccursor, text, "\n");
+                Some(CCursorPair::one(cursor.ccursor))
+            } else {
+                None
+            }
+        }
+
+        Key::A | Key::E | Key::N | Key::P | Key::B | Key::F if mac_ctrl => {
+            handle_emacs_keybindings(&mut cursorp.primary, galley, key, modifiers);
+            cursorp.secondary = cursorp.primary;
+            None
+        }
+
         _ => None,
     }
+}
+
+fn handle_emacs_keybindings(cursor: &mut Cursor, galley: &Galley, key: Key, _: &Modifiers) {
+    match key {
+        Key::A => {
+            *cursor = galley.cursor_begin_of_row(cursor);
+        }
+        Key::E => {
+            *cursor = galley.cursor_end_of_row(cursor);
+        }
+        Key::N => {
+            *cursor = galley.cursor_down_one_row(cursor);
+        }
+        Key::P => {
+            *cursor = galley.cursor_up_one_row(cursor);
+        }
+        Key::B => {
+            *cursor = galley.cursor_left_one_character(cursor);
+        }
+        Key::F => {
+            *cursor = galley.cursor_right_one_character(cursor);
+        }
+        _ => {
+            unreachable!()
+        }
+    }
+}
+
+fn transpose_characters(
+    text: &mut String,
+    galley: &Galley,
+    cursorp: &CursorPair,
+) -> Option<CCursorPair> {
+    let cursor = if let Some(cursor) = cursorp.single() {
+        cursor
+    } else {
+        return None;
+    };
+
+    let left = galley.cursor_left_one_character(&cursor);
+    let right = galley.cursor_right_one_character(&cursor);
+
+    // if the cursor is at the beginning, just ignore
+    if left.ccursor == cursor.ccursor {
+        return None;
+    }
+
+    let (head, tail) = if right.rcursor.row != cursor.rcursor.row || right.ccursor == cursor.ccursor
+    {
+        // if the cursor is at the end of line, swap the leading two characters.
+        let left_ = galley.cursor_left_one_character(&left);
+
+        // if the cursor did not move, just ignore
+        if left_.ccursor == left.ccursor {
+            return None;
+        }
+
+        (left_.ccursor, cursor.ccursor)
+    } else if left.rcursor.row != cursor.rcursor.row {
+        (left.ccursor, right.ccursor)
+    } else {
+        (left.ccursor, cursor.ccursor)
+    };
+
+    let mut new_text = String::with_capacity(text.len());
+    let mut chars = text.chars();
+
+    for _ in 0..head.index {
+        let c = chars.next().unwrap();
+        new_text.push(c);
+    }
+    let (l, r) = (chars.next().unwrap(), chars.next().unwrap());
+    new_text.push(r);
+    new_text.push(l);
+    new_text.extend(chars);
+
+    *text = new_text;
+
+    Some(CCursorPair::one(tail))
 }
 
 fn move_single_cursor(cursor: &mut Cursor, galley: &Galley, key: Key, modifiers: &Modifiers) {

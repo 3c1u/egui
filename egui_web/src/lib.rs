@@ -290,6 +290,15 @@ pub fn translate_key(key: &str) -> Option<egui::Key> {
         "u" | "U" => Some(egui::Key::U),
         "w" | "W" => Some(egui::Key::W),
         "z" | "Z" => Some(egui::Key::Z),
+        "e" | "E" => Some(egui::Key::E),
+        "n" | "N" => Some(egui::Key::N),
+        "p" | "P" => Some(egui::Key::P),
+        "b" | "B" => Some(egui::Key::B),
+        "f" | "F" => Some(egui::Key::F),
+        "d" | "D" => Some(egui::Key::D),
+        "o" | "O" => Some(egui::Key::O),
+        "h" | "H" => Some(egui::Key::H),
+        "t" | "T" => Some(egui::Key::T),
         _ => None,
     }
 }
@@ -473,18 +482,22 @@ fn repaint_every_ms(runner_ref: &AppRunnerRef, milliseconds: i32) -> Result<(), 
 }
 
 fn modifiers_from_event(event: &web_sys::KeyboardEvent) -> egui::Modifiers {
+    let window = web_sys::window().unwrap();
+    let is_mac = window.navigator().platform().unwrap();
+    let is_mac = is_mac.starts_with("Mac");
+
     egui::Modifiers {
         alt: event.alt_key(),
         ctrl: event.ctrl_key(),
         shift: event.shift_key(),
 
-        // Ideally we should know if we are running or mac or not,
-        // but this works good enough for now.
-        mac_cmd: event.meta_key(),
+        mac_cmd: is_mac && event.meta_key(),
 
-        // Ideally we should know if we are running or mac or not,
-        // but this works good enough for now.
-        command: event.ctrl_key() || event.meta_key(),
+        command: if is_mac {
+            event.meta_key()
+        } else {
+            event.ctrl_key()
+        },
     }
 }
 
